@@ -21,6 +21,11 @@ namespace PollosTrack
             etiquetaPieBarra = new Label();
             botonCatalogos = new Button();
             botonInventario = new Button();
+            panelSubmenuPOS = new Panel();
+            botonMesas = new Button();
+            botonComandas = new Button();
+            botonPendientes = new Button();
+            botonFacturacion = new Button();
             botonPOS = new Button();
             botonInicio = new Button();
             panelEmpresa = new Panel();
@@ -37,10 +42,12 @@ namespace PollosTrack
             // 
             // panelBarraLateral
             // 
+            panelBarraLateral.AutoScroll = true;
             panelBarraLateral.BackColor = Color.FromArgb(24, 49, 83);
             panelBarraLateral.Controls.Add(etiquetaPieBarra);
             panelBarraLateral.Controls.Add(botonCatalogos);
             panelBarraLateral.Controls.Add(botonInventario);
+            panelBarraLateral.Controls.Add(panelSubmenuPOS);
             panelBarraLateral.Controls.Add(botonPOS);
             panelBarraLateral.Controls.Add(botonInicio);
             panelBarraLateral.Controls.Add(panelEmpresa);
@@ -122,6 +129,7 @@ namespace PollosTrack
             botonPOS.Text = "POS · Mesas y comandas";
             botonPOS.TextAlign = ContentAlignment.MiddleLeft;
             botonPOS.UseVisualStyleBackColor = false;
+            botonPOS.Click += AlPulsarMenuPOS;
             // 
             // botonInicio
             // 
@@ -142,6 +150,7 @@ namespace PollosTrack
             botonInicio.Text = "Inicio";
             botonInicio.TextAlign = ContentAlignment.MiddleLeft;
             botonInicio.UseVisualStyleBackColor = false;
+            botonInicio.Click += AlVolverAlInicio;
             // 
             // panelEmpresa
             // 
@@ -225,6 +234,68 @@ namespace PollosTrack
             // 
             // FormPrincipal
             // 
+            // Submenú POS: el orden de agregado permite apilar las opciones con Dock.Top.
+            panelSubmenuPOS.Controls.Add(botonFacturacion);
+            panelSubmenuPOS.Controls.Add(botonPendientes);
+            panelSubmenuPOS.Controls.Add(botonComandas);
+            panelSubmenuPOS.Controls.Add(botonMesas);
+            panelSubmenuPOS.Dock = DockStyle.Top;
+            panelSubmenuPOS.Name = "panelSubmenuPOS";
+            panelSubmenuPOS.Size = new Size(274, 176);
+            panelSubmenuPOS.TabIndex = 2;
+            panelSubmenuPOS.Visible = false;
+            botonMesas.Dock = DockStyle.Top;
+            botonMesas.TabIndex = 0;
+            botonMesas.Name = "botonMesas";
+            botonMesas.Size = new Size(274, 44);
+            botonMesas.Text = "Mapa de mesas";
+            botonMesas.TextAlign = ContentAlignment.MiddleLeft;
+            botonMesas.Padding = new Padding(42, 0, 8, 0);
+            botonMesas.BackColor = Color.FromArgb(24, 49, 83);
+            botonMesas.ForeColor = Color.White;
+            botonMesas.FlatStyle = FlatStyle.Flat;
+            botonMesas.FlatAppearance.BorderSize = 0;
+            botonMesas.UseVisualStyleBackColor = false;
+            botonMesas.Click += AlAbrirMesas;
+            botonComandas.Dock = DockStyle.Top;
+            botonComandas.TabIndex = 1;
+            botonComandas.Name = "botonComandas";
+            botonComandas.Size = new Size(274, 44);
+            botonComandas.Text = "Gestión de comandas";
+            botonComandas.TextAlign = ContentAlignment.MiddleLeft;
+            botonComandas.Padding = new Padding(42, 0, 8, 0);
+            botonComandas.BackColor = Color.FromArgb(24, 49, 83);
+            botonComandas.ForeColor = Color.White;
+            botonComandas.FlatStyle = FlatStyle.Flat;
+            botonComandas.FlatAppearance.BorderSize = 0;
+            botonComandas.UseVisualStyleBackColor = false;
+            botonComandas.Click += AlAbrirComandas;
+            botonPendientes.Dock = DockStyle.Top;
+            botonPendientes.TabIndex = 2;
+            botonPendientes.Name = "botonPendientes";
+            botonPendientes.Size = new Size(274, 44);
+            botonPendientes.Text = "Monitor de pendientes";
+            botonPendientes.TextAlign = ContentAlignment.MiddleLeft;
+            botonPendientes.Padding = new Padding(42, 0, 8, 0);
+            botonPendientes.BackColor = Color.FromArgb(24, 49, 83);
+            botonPendientes.ForeColor = Color.White;
+            botonPendientes.FlatStyle = FlatStyle.Flat;
+            botonPendientes.FlatAppearance.BorderSize = 0;
+            botonPendientes.UseVisualStyleBackColor = false;
+            botonPendientes.Click += AlAbrirPendientes;
+            botonFacturacion.Dock = DockStyle.Top;
+            botonFacturacion.TabIndex = 3;
+            botonFacturacion.Name = "botonFacturacion";
+            botonFacturacion.Size = new Size(274, 44);
+            botonFacturacion.Text = "Facturación y cierre";
+            botonFacturacion.TextAlign = ContentAlignment.MiddleLeft;
+            botonFacturacion.Padding = new Padding(42, 0, 8, 0);
+            botonFacturacion.BackColor = Color.FromArgb(24, 49, 83);
+            botonFacturacion.ForeColor = Color.White;
+            botonFacturacion.FlatStyle = FlatStyle.Flat;
+            botonFacturacion.FlatAppearance.BorderSize = 0;
+            botonFacturacion.UseVisualStyleBackColor = false;
+            botonFacturacion.Click += AlAbrirFacturacion;
             AutoScaleDimensions = new SizeF(8F, 20F);
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(1257, 933);
@@ -245,6 +316,11 @@ namespace PollosTrack
 
         #endregion
 
+        private Panel panelSubmenuPOS;
+        private Button botonMesas;
+        private Button botonComandas;
+        private Button botonPendientes;
+        private Button botonFacturacion;
         private Panel panelBarraLateral;
         private Panel panelEmpresa;
         private Label etiquetaLogo;
