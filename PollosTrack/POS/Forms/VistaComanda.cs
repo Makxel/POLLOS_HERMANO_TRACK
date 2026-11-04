@@ -15,6 +15,10 @@ namespace PollosTrack.POS.Forms
         private Cliente? clienteSeleccionado;
         private bool clienteGenerico;
         private bool pedidoGuardado;
+        private int pedidoActualId;
+        private bool cargandoCuentas;
+        private Producto? productoSeleccionado;
+        private List<Producto> productos = new List<Producto>();
 
         // Cuando exista inicio de sesión, asignar aquí el ID del usuario autenticado.
         [System.ComponentModel.Browsable(false)]
@@ -26,7 +30,7 @@ namespace PollosTrack.POS.Forms
         public VistaComanda()
         {
             InitializeComponent();
-            panelEncabezado.Visible = false;
+
 
         }
 
@@ -38,7 +42,7 @@ namespace PollosTrack.POS.Forms
             etiquetaDescripcion.Text = $"Mesa {mesa.Numero} · Capacidad: {mesa.Capacidad} personas";
             panelEncabezado.Visible = esNuevaCuenta;
             if (!esNuevaCuenta)
-                etiquetaDescripcion.Text += "\r\nLa consulta de cuentas existentes está pendiente.";
+                etiquetaDescripcion.Text += "\r\nSelecciona una cuenta para consultar sus productos.";
         }
 
         // Busca un usuario activo ya registrado; la sesión tendrá prioridad cuando exista.
@@ -139,19 +143,324 @@ namespace PollosTrack.POS.Forms
                 int pedidoId = Convert.ToInt32(comando.ExecuteScalar());
                 transaccion.Commit();
                 pedidoGuardado = true;
-                panelEncabezado.Enabled = false;
-                etiquetaDescripcion.Text = $"Mesa {MesaActual.Numero} · Pedido {pedidoId} creado\r\nLa asociación de productos se implementará en la siguiente etapa.";
+                panelEncabezado.Visible = false;
+                pedidoActualId = pedidoId;
+                etiquetaDescripcion.Text = $"Mesa {MesaActual.Numero} · Pedido {pedidoId} creado\r\nAgrega los productos de esta cuenta.";
             }
             catch (Exception excepcion) { MessageBox.Show(this, excepcion.Message, "No se pudo crear el pedido"); }
             finally { if (!pedidoGuardado) botonGuardar.Enabled = true; }
+            if (pedidoGuardado) MostrarDetallePedido();
         }
 
+        // La carga se omite en el diseñador: allí todos los controles quedan editables.
+        private void AlCargarComanda(object? origen, EventArgs argumentos)
+        {
+            if (DesignMode || System.ComponentModel.LicenseManager.UsageMode == System.ComponentModel.LicenseUsageMode.Designtime)
+            {
+                return;
+            }
+            panelEncabezado.Visible = EsNuevaCuenta;
+            panelDetalle.Visible = false;
+            selectorCuenta.Visible = false;
+            etiquetaCuenta.Visible = false;
+            if (MesaActual == null || EsNuevaCuenta) return;
+            try
+            {
+                using SqlConnection conexion = new conexion_sql_server().AbrirConexion();
+                using SqlCommand comando = new SqlCommand("""
+                    SELECT pedido.PEDIDO_ID,CONCAT('Cuenta ',pedido.PEDIDO_ID,' · ',cliente.NOMBRE,' · ',pedido.NOMBRE_REFERENCIA) AS Nombre
+                    FROM POS.ENCABEZADO_PEDIDO pedido JOIN CAT.CLIENTES cliente ON cliente.CLIENTE_ID=pedido.CLIENTE_ID
+                    JOIN CAT.ESTADOS estado ON estado.ESTADO_ID=pedido.ESTADO_ID
+                    WHERE pedido.MESA_ID=@Mesa AND estado.ENTIDAD='ENCABEZADO_PEDIDO'
+                    AND estado.CODIGO IN ('ABIERTO','POR_COBRAR','POR COBRAR') ORDER BY pedido.PEDIDO_ID;
+                    """, conexion);
+                comando.Parameters.Add("@Mesa", SqlDbType.Int).Value = MesaActual.MesaId;
+                using SqlDataReader lector = comando.ExecuteReader();
+                DataTable cuentas = new DataTable();
+                cuentas.Load(lector);
+                cargandoCuentas = true;
+                selectorCuenta.DisplayMember = "Nombre";
+                selectorCuenta.ValueMember = "PEDIDO_ID";
+                selectorCuenta.DataSource = cuentas;
+                selectorCuenta.SelectedIndex = -1;
+                panelDetalle.Visible = true;
+                selectorCuenta.Visible = true;
+                etiquetaCuenta.Visible = true;
+                etiquetaSubtotal.Text = "Selecciona una cuenta. Si no aparecen opciones, no hay cuentas abiertas.";
+            }
+            catch (Exception excepcion) { MessageBox.Show(this, excepcion.Message, "No se pudieron cargar las cuentas"); }
+            finally { cargandoCuentas = false; }
+        }
+
+        // Identifica la cuenta elegida sin asumir que una mesa tiene un solo pedido.
+        private void AlElegirCuenta(object? origen, EventArgs argumentos)
+        {
+            if (!cargandoCuentas && selectorCuenta.SelectedItem is DataRowView cuenta)
+            {
+                pedidoActualId = Convert.ToInt32(cuenta["PEDIDO_ID"]);
+                MostrarDetallePedido();
+            }
+        }
+
+        // Recupera productos y categorías activos antes de consultar las líneas guardadas.
+        private void MostrarDetallePedido()
+        {
+            panelDetalle.Visible = true;
+            try
+            {
+                using SqlConnection conexion = new conexion_sql_server().AbrirConexion();
+                using SqlCommand comando = new SqlCommand("""
+                    SELECT CATEGORIA_ID,NOMBRE FROM CAT.CATEGORIAS WHERE ACTIVO=1 ORDER BY NOMBRE;
+                    SELECT producto.PRODUCTO_ID,producto.CATEGORIA_ID,producto.NOMBRE,producto.PRECIO_UNITARIO,producto.DESCRIPCION
+                    FROM CAT.PRODUCTOS producto JOIN CAT.CATEGORIAS categoria ON categoria.CATEGORIA_ID=producto.CATEGORIA_ID
+                    WHERE producto.ACTIVO=1 AND categoria.ACTIVO=1 ORDER BY producto.NOMBRE;
+                    """, conexion);
+                using SqlDataReader lector = comando.ExecuteReader();
+                List<Categoria> categorias = new List<Categoria>();
+                categorias.Add(new Categoria { Nombre = "Todas las categorías" });
+                while (lector.Read())
+                {
+                    categorias.Add(new Categoria { CategoriaId = lector.GetInt32(0), Nombre = lector.GetString(1) });
+                }
+                lector.NextResult();
+                productos.Clear();
+                while (lector.Read())
+                {
+                    productos.Add(new Producto { ProductoId = lector.GetInt32(0), CategoriaId = lector.GetInt32(1), Nombre = lector.GetString(2), PrecioUnitario = lector.GetDecimal(3), Descripcion = Convert.ToString(lector.GetValue(4)) });
+                }
+                selectorCategoria.DisplayMember = nameof(Categoria.Nombre);
+                selectorCategoria.DataSource = categorias;
+                AlCambiarCategoria(this, EventArgs.Empty);
+                CargarLineasPedido();
+            }
+            catch (Exception excepcion)
+            {
+                botonAgregarProducto.Enabled = false;
+                MessageBox.Show(this, excepcion.Message, "No se pudo cargar el detalle. Pulsa Actualizar para reintentar.");
+            }
+        }
+
+        // Filtra el catálogo en memoria según la categoría elegida.
+        private void AlCambiarCategoria(object? origen, EventArgs argumentos)
+        {
+            productoSeleccionado = null;
+            textoProducto.Clear();
+            AlCambiarImporte(this, EventArgs.Empty);
+        }
+
+        // Calcula la vista previa del importe; al guardar se usa el precio vigente del catálogo.
+        private void AlCambiarImporte(object? origen, EventArgs argumentos)
+        {
+            etiquetaPrecio.Text = "Selecciona un producto con el botón Buscar producto.";
+            botonAgregarProducto.Enabled = false;
+            if (productoSeleccionado is Producto producto && pedidoActualId > 0)
+            {
+                etiquetaPrecio.Text = $"Precio: C$ {producto.PrecioUnitario:N2} · Importe: C$ {producto.PrecioUnitario * cantidadProducto.Value:N2}";
+                botonAgregarProducto.Enabled = true;
+            }
+        }
+
+        // Guarda una línea pendiente dentro de una transacción, sin descontar inventario todavía.
+        private void AlAgregarProducto(object? origen, EventArgs argumentos)
+        {
+            if (pedidoActualId == 0 || MesaActual == null || productoSeleccionado is not Producto producto) return;
+            botonAgregarProducto.Enabled = false;
+            bool guardado = false;
+            try
+            {
+                using SqlConnection conexion = new conexion_sql_server().AbrirConexion();
+                using SqlTransaction transaccion = conexion.BeginTransaction();
+                using SqlCommand validar = new SqlCommand("""
+                    SELECT estado.CODIGO FROM POS.ENCABEZADO_PEDIDO pedido WITH (UPDLOCK,HOLDLOCK)
+                    JOIN CAT.ESTADOS estado ON estado.ESTADO_ID=pedido.ESTADO_ID
+                    WHERE pedido.PEDIDO_ID=@Pedido AND pedido.MESA_ID=@Mesa AND estado.ENTIDAD='ENCABEZADO_PEDIDO';
+                    """, conexion, transaccion);
+                validar.Parameters.Add("@Pedido", SqlDbType.Int).Value = pedidoActualId;
+                validar.Parameters.Add("@Mesa", SqlDbType.Int).Value = MesaActual.MesaId;
+                if (Convert.ToString(validar.ExecuteScalar()) != "ABIERTO")
+                {
+                    throw new InvalidOperationException("Solo se pueden agregar productos a una cuenta abierta.");
+                }
+                int estadoId = ObtenerIdentificadorEstado(conexion, transaccion, "DETALLE_PEDIDO", "PENDIENTE");
+                using SqlCommand insertar = new SqlCommand("""
+                    INSERT INTO POS.DETALLE_PEDIDO (PEDIDO_ID,PRODUCTO_ID,CANTIDAD,PRECIO_UNITARIO,NOTAS,ESTADO_ID,MINUTOS_PREPARACION)
+                    SELECT @Pedido,producto.PRODUCTO_ID,@Cantidad,producto.PRECIO_UNITARIO,@Notas,@Estado,@Minutos
+                    FROM CAT.PRODUCTOS producto JOIN CAT.CATEGORIAS categoria ON categoria.CATEGORIA_ID=producto.CATEGORIA_ID
+                    WHERE producto.PRODUCTO_ID=@Producto AND producto.ACTIVO=1 AND categoria.ACTIVO=1;
+                    """, conexion, transaccion);
+                insertar.Parameters.Add("@Pedido", SqlDbType.Int).Value = pedidoActualId;
+                insertar.Parameters.Add("@Producto", SqlDbType.Int).Value = producto.ProductoId;
+                insertar.Parameters.Add("@Cantidad", SqlDbType.Int).Value = Convert.ToInt32(cantidadProducto.Value);
+                insertar.Parameters.Add("@Notas", SqlDbType.VarChar, 150).Value = textoNotas.Text.Trim();
+                insertar.Parameters.Add("@Estado", SqlDbType.Int).Value = estadoId;
+                insertar.Parameters.Add("@Minutos", SqlDbType.Int).Value = DBNull.Value;
+
+                if (insertar.ExecuteNonQuery() != 1)
+                {
+                    throw new InvalidOperationException("El producto o la categoría ya no están activos.");
+                }
+                transaccion.Commit();
+                guardado = true;
+                cantidadProducto.Value = 1;
+
+                textoNotas.Clear();
+            }
+            catch (Exception excepcion) { MessageBox.Show(this, excepcion.Message, "No se pudo agregar el producto"); }
+            finally { AlCambiarImporte(this, EventArgs.Empty); }
+            // Un fallo de lectura posterior no debe provocar una segunda inserción.
+            if (guardado)
+            {
+                try { CargarLineasPedido(); }
+                catch (Exception excepcion) { MessageBox.Show(this, "El producto se guardó. Pulsa Actualizar para verlo.\r\n" + excepcion.Message); }
+            }
+        }
+
+        // Muestra precios históricos y calcula el subtotal sin las líneas canceladas.
+        private void CargarLineasPedido()
+        {
+            using SqlConnection conexion = new conexion_sql_server().AbrirConexion();
+            using SqlCommand comando = new SqlCommand("""
+                SELECT producto.NOMBRE AS Producto,detalle.CANTIDAD AS Cantidad,detalle.PRECIO_UNITARIO AS Precio,
+                    detalle.CANTIDAD*detalle.PRECIO_UNITARIO AS Importe,detalle.NOTAS AS Notas,
+                    detalle.MINUTOS_PREPARACION AS Minutos,estado.NOMBRE AS Estado,estado.CODIGO AS CodigoEstado
+                FROM POS.DETALLE_PEDIDO detalle JOIN CAT.PRODUCTOS producto ON producto.PRODUCTO_ID=detalle.PRODUCTO_ID
+                JOIN CAT.ESTADOS estado ON estado.ESTADO_ID=detalle.ESTADO_ID
+                WHERE detalle.PEDIDO_ID=@Pedido ORDER BY detalle.DETALLE_ID;
+                """, conexion);
+            comando.Parameters.Add("@Pedido", SqlDbType.Int).Value = pedidoActualId;
+            using SqlDataReader lector = comando.ExecuteReader();
+            DataTable detalles = new DataTable();
+            detalles.Load(lector);
+            tablaDetalle.DataSource = detalles;
+            foreach (DataGridViewColumn columna in tablaDetalle.Columns)
+            {
+                if (columna.Name == "CodigoEstado") columna.Visible = false;
+                if (columna.Name == "Precio" || columna.Name == "Importe") columna.DefaultCellStyle.Format = "N2";
+            }
+            decimal subtotal = 0;
+            foreach (DataRow detalle in detalles.Rows)
+            {
+                if (Convert.ToString(detalle["CodigoEstado"]) != "CANCELADO")
+                {
+                    subtotal += Convert.ToDecimal(detalle["Importe"]);
+                }
+            }
+            etiquetaSubtotal.Text = $"Cuenta {pedidoActualId} · Subtotal: C$ {subtotal:N2} · IVA y cobro en Facturación";
+        }
+
+        // Recarga el detalle únicamente cuando el usuario lo solicita.
+        private void AlActualizarDetalle(object? origen, EventArgs argumentos)
+        {
+            if (pedidoActualId > 0) MostrarDetallePedido();
+        }
         // Regresa al mapa para consultar la ocupación actualizada.
         private void AlVolverAMesas(object? origen, EventArgs argumentos)
         {
             if (VolverAMesasSolicitado != null) VolverAMesasSolicitado(this, EventArgs.Empty);
         }
 
+        // Filtra el catálogo cargado y abre una selección modal sin consultas adicionales.
+        private void AlBuscarProducto(object? origen, EventArgs argumentos)
+        {
+            List<Producto> disponibles = new List<Producto>();
+            if (selectorCategoria.SelectedItem is Categoria categoria)
+            {
+                foreach (Producto producto in productos)
+                {
+                    if (categoria.CategoriaId == 0 || producto.CategoriaId == categoria.CategoriaId)
+                    {
+                        disponibles.Add(producto);
+                    }
+                }
+            }
+            if (disponibles.Count == 0)
+            {
+                MessageBox.Show(this, "No hay productos activos en esta categoría. Revisa Catálogos y pulsa Actualizar.");
+                return;
+            }
+            using BuscadorProductos buscador = new BuscadorProductos(disponibles);
+            if (buscador.ShowDialog(this) == DialogResult.OK && buscador.ProductoSeleccionado != null)
+            {
+                productoSeleccionado = buscador.ProductoSeleccionado;
+                textoProducto.Text = productoSeleccionado.Nombre;
+                if (!string.IsNullOrWhiteSpace(productoSeleccionado.Descripcion))
+                {
+                    textoProducto.Text += " · " + productoSeleccionado.Descripcion;
+                }
+                AlCambiarImporte(this, EventArgs.Empty);
+            }
+        }
+
+        // Ventana sencilla de selección. Devuelve el objeto Producto de Catálogos.
+        private class BuscadorProductos : Form
+        {
+            private DataGridView tablaProductos = new DataGridView();
+            public Producto? ProductoSeleccionado { get; private set; }
+
+            public BuscadorProductos(List<Producto> productos)
+            {
+                Text = "Seleccionar producto";
+                StartPosition = FormStartPosition.CenterParent;
+                Size = new Size(820, 460);
+                MinimumSize = new Size(600, 360);
+                Padding = new Padding(16);
+                BackColor = Color.White;
+                Font = new Font("Segoe UI", 10F);
+                tablaProductos.Dock = DockStyle.Fill;
+                tablaProductos.ReadOnly = true;
+                tablaProductos.AllowUserToAddRows = false;
+                tablaProductos.AllowUserToDeleteRows = false;
+                tablaProductos.MultiSelect = false;
+                tablaProductos.RowHeadersVisible = false;
+                tablaProductos.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
+                tablaProductos.AutoGenerateColumns = false;
+                tablaProductos.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
+                tablaProductos.BackgroundColor = Color.White;
+                tablaProductos.BorderStyle = BorderStyle.None;
+                tablaProductos.EnableHeadersVisualStyles = false;
+                tablaProductos.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(24, 49, 83);
+                tablaProductos.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
+                tablaProductos.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(246, 248, 251);
+                tablaProductos.DefaultCellStyle.SelectionBackColor = Color.FromArgb(255, 235, 171);
+                tablaProductos.DefaultCellStyle.SelectionForeColor = Color.Black;
+                tablaProductos.Columns.Add(new DataGridViewTextBoxColumn { HeaderText = "Producto", DataPropertyName = nameof(Producto.Nombre) });
+                tablaProductos.Columns.Add(new DataGridViewTextBoxColumn { HeaderText = "Descripción", DataPropertyName = nameof(Producto.Descripcion), FillWeight = 160 });
+                DataGridViewTextBoxColumn columnaPrecio = new DataGridViewTextBoxColumn();
+                columnaPrecio.HeaderText = "Precio C$";
+                columnaPrecio.DataPropertyName = nameof(Producto.PrecioUnitario);
+                columnaPrecio.DefaultCellStyle.Format = "N2";
+                columnaPrecio.FillWeight = 60;
+                tablaProductos.Columns.Add(columnaPrecio);
+                tablaProductos.DataSource = productos;
+                tablaProductos.CellDoubleClick += AlPulsarFila;
+                FlowLayoutPanel acciones = new FlowLayoutPanel { Dock = DockStyle.Bottom, Height = 55, Padding = new Padding(0, 12, 0, 0) };
+                Button seleccionar = new Button { Text = "Seleccionar", Width = 140, Height = 34, BackColor = Color.FromArgb(255, 209, 79), FlatStyle = FlatStyle.Flat };
+                seleccionar.Click += AlSeleccionarProducto;
+                Button cancelar = new Button { Text = "Cancelar", Width = 120, Height = 34, DialogResult = DialogResult.Cancel };
+                acciones.Controls.Add(seleccionar);
+                acciones.Controls.Add(cancelar);
+                Controls.Add(tablaProductos);
+                Controls.Add(acciones);
+                AcceptButton = seleccionar;
+                CancelButton = cancelar;
+            }
+
+            // Permite confirmar también con doble clic sobre una fila de datos.
+            private void AlPulsarFila(object? origen, DataGridViewCellEventArgs argumentos)
+            {
+                if (argumentos.RowIndex >= 0) AlSeleccionarProducto(this, EventArgs.Empty);
+            }
+
+            // Cierra el modal únicamente con una selección válida.
+            private void AlSeleccionarProducto(object? origen, EventArgs argumentos)
+            {
+                if (tablaProductos.CurrentRow != null && tablaProductos.CurrentRow.DataBoundItem is Producto producto)
+                {
+                    ProductoSeleccionado = producto;
+                    DialogResult = DialogResult.OK;
+                }
+            }
+        }
         // Modal local de esta vista: evita agregar archivos o carpetas auxiliares.
         private class BuscadorClientes : Form
         {

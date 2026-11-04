@@ -173,3 +173,109 @@ GO
 --('DETALLE_PEDIDO', 'EN_PREPARACION', 'En preparación', '#BFD8FA', 2),
 --('DETALLE_PEDIDO', 'ENTREGADO', 'Entregado', '#DCEFE4', 3),
 --('DETALLE_PEDIDO', 'CANCELADO', 'Cancelado', '#F7D6D6', 4);
+
+
+
+-- Insercion de datos de prueba para tabla CATEGORIAS y PRODUCTOS
+
+--BEGIN TRANSACTION;
+
+---- Categorías del menú.
+--INSERT INTO CAT.CATEGORIAS (NOMBRE, ACTIVO)
+--SELECT nuevos.NOMBRE, 1
+--FROM (VALUES
+--    ('Pollo frito'),
+--    ('Combos'),
+--    ('Acompañamientos'),
+--    ('Bebidas'),
+--    ('Postres')
+--) AS nuevos(NOMBRE)
+--WHERE NOT EXISTS (
+--    SELECT 1
+--    FROM CAT.CATEGORIAS
+--    WHERE NOMBRE = nuevos.NOMBRE
+--);
+
+---- Productos: precios unitarios de ejemplo, antes de IVA.
+--INSERT INTO CAT.PRODUCTOS (
+--    CATEGORIA_ID,
+--    NOMBRE,
+--    DESCRIPCION,
+--    PRECIO_UNITARIO,
+--    APLICA_IVA,
+--    ACTIVO
+--)
+--SELECT
+--    categoria.CATEGORIA_ID,
+--    nuevos.NOMBRE,
+--    nuevos.DESCRIPCION,
+--    nuevos.PRECIO,
+--    1,
+--    1
+--FROM (VALUES
+--    ('Pollo frito', 'Pieza de pollo original',
+--     'Una pieza de pollo frito con empanizado original.', 65.00),
+
+--    ('Pollo frito', 'Pieza de pollo picante',
+--     'Una pieza de pollo frito con empanizado picante.', 70.00),
+
+--    ('Pollo frito', 'Alitas tradicionales',
+--     'Orden de seis alitas con salsa a elección.', 185.00),
+
+--    ('Pollo frito', 'Tiras de pollo',
+--     'Cuatro tiras de pechuga empanizadas con salsa de la casa.', 155.00),
+
+--    ('Combos', 'Combo individual',
+--     'Dos piezas de pollo, papas pequeñas y una gaseosa de 355 ml.', 195.00),
+
+--    ('Combos', 'Combo tres piezas',
+--     'Tres piezas de pollo, papas medianas y una gaseosa de 355 ml.', 265.00),
+
+--    ('Combos', 'Combo de tiras',
+--     'Cuatro tiras de pollo, papas pequeñas y una gaseosa de 355 ml.', 225.00),
+
+--    ('Combos', 'Combo familiar',
+--     'Ocho piezas de pollo, papas grandes, ensalada grande y gaseosa de 2 litros.', 720.00),
+
+--    ('Acompañamientos', 'Papas fritas pequeñas',
+--     'Porción individual de papas fritas.', 45.00),
+
+--    ('Acompañamientos', 'Papas fritas grandes',
+--     'Porción de papas fritas para compartir.', 90.00),
+
+--    ('Acompañamientos', 'Ensalada de repollo',
+--     'Porción individual de ensalada cremosa de repollo y zanahoria.', 40.00),
+
+--    ('Acompañamientos', 'Puré de papas',
+--     'Porción individual de puré de papas con salsa.', 45.00),
+
+--    ('Acompañamientos', 'Salsa adicional',
+--     'Una porción de salsa de la casa.', 15.00),
+
+--    ('Bebidas', 'Gaseosa de 355 ml',
+--     'Gaseosa individual; indicar el sabor en las notas.', 35.00),
+
+--    ('Bebidas', 'Gaseosa de 2 litros',
+--     'Botella de gaseosa para compartir.', 85.00),
+
+--    ('Bebidas', 'Agua embotellada de 600 ml',
+--     'Botella individual de agua purificada.', 30.00),
+
+--    ('Bebidas', 'Limonada natural',
+--     'Vaso de limonada natural de 450 ml.', 45.00),
+
+--    ('Postres', 'Brownie de chocolate',
+--     'Porción individual de brownie de chocolate.', 55.00),
+
+--    ('Postres', 'Flan de caramelo',
+--     'Porción individual de flan con caramelo.', 50.00)
+--) AS nuevos(CATEGORIA, NOMBRE, DESCRIPCION, PRECIO)
+--INNER JOIN CAT.CATEGORIAS AS categoria
+--    ON categoria.NOMBRE = nuevos.CATEGORIA
+--WHERE NOT EXISTS (
+--    SELECT 1
+--    FROM CAT.PRODUCTOS
+--    WHERE NOMBRE = nuevos.NOMBRE
+--);
+
+--COMMIT TRANSACTION;
