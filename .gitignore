@@ -361,3 +361,6 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+
+# Archivo conexion a base de datos sql server
+PollosTrack/Utils/conexion_sql_server.cs
