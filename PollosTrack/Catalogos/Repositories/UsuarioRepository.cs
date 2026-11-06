@@ -106,22 +106,27 @@ namespace PollosTrack.Catalogos.Repositories
             cmd.ExecuteNonQuery();
         }
 
-        // Crea el rol "Administrador" y el usuario admin si la tabla de usuarios está vacía
+        // Crea los roles base y el usuario admin si la tabla de usuarios está vacía
         public void AsegurarAdminInicial()
         {
             using var conn = Conexion.ObtenerConexion();
             conn.Open();
 
+            using (var roles = new SqlCommand(
+                @"INSERT INTO SEG.ROLES (NOMBRE, DESCRIPCION)
+                  SELECT v.NOMBRE, v.DESCRIPCION
+                  FROM (VALUES
+                      ('Administrador', 'Acceso total al sistema'),
+                      ('Mesero', 'Toma pedidos y atiende mesas'),
+                      ('Cajero', 'Cobra y emite facturas')) AS v(NOMBRE, DESCRIPCION)
+                  WHERE NOT EXISTS (SELECT 1 FROM SEG.ROLES r WHERE r.NOMBRE = v.NOMBRE)", conn))
+            {
+                roles.ExecuteNonQuery();
+            }
+
             using (var cuenta = new SqlCommand("SELECT COUNT(*) FROM SEG.USUARIOS", conn))
             {
                 if ((int)cuenta.ExecuteScalar()! > 0) return;
-            }
-
-            using (var rol = new SqlCommand(
-                @"IF NOT EXISTS (SELECT 1 FROM SEG.ROLES WHERE NOMBRE = 'Administrador')
-                  INSERT INTO SEG.ROLES (NOMBRE, DESCRIPCION) VALUES ('Administrador', 'Acceso total al sistema')", conn))
-            {
-                rol.ExecuteNonQuery();
             }
 
             using var admin = new SqlCommand(
