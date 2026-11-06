@@ -2,6 +2,7 @@ using System;
 using System.Windows.Forms;
 using PollosTrack.Inventario.Forms;
 using PollosTrack.POS.Forms;
+using PollosTrack.Catalogos.Forms;
 
 namespace PollosTrack
 {
@@ -14,7 +15,9 @@ namespace PollosTrack
 
             // Conectar el botón de Inventario
             botonInventario.Click += BotonInventario_Click;
-            
+
+            botonCatalogos.Click += AlAbrirCatalogos;
+
             // La imagen va incluida en el ejecutable y conserva sus proporciones con Zoom.
             using Stream? archivoLogo = typeof(FormPrincipal).Assembly.GetManifestResourceStream("PollosTrack.LogoEmpresa");
             if (archivoLogo != null)
@@ -174,6 +177,11 @@ namespace PollosTrack
                     boton.ForeColor = Color.White;
                 }
             }
+        }
+
+        private void AlAbrirCatalogos(object? origen, EventArgs argumentos)
+        {
+            MostrarVista(new UC_Catalogos(), "Catálogos", botonCatalogos);
         }
     }
 }

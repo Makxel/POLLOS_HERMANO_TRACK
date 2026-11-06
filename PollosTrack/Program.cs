@@ -1,3 +1,5 @@
+using PollosTrack.Catalogos.Forms;
+
 namespace PollosTrack
 {
     internal static class Program
@@ -6,6 +8,12 @@ namespace PollosTrack
         static void Main()
         {
             ApplicationConfiguration.Initialize();
+
+            using (var login = new FormLogin())
+            {
+                if (login.ShowDialog() != DialogResult.OK) return;
+            }
+
             Application.Run(new FormPrincipal());
         }
     }
