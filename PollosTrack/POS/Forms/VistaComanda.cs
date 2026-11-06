@@ -282,6 +282,7 @@ namespace PollosTrack.POS.Forms
                     throw new InvalidOperationException("Solo se pueden agregar productos a una cuenta abierta.");
                 }
                 int estadoId = ObtenerIdentificadorEstado(conexion, transaccion, "DETALLE_PEDIDO", "PENDIENTE");
+                ValidarDisponibilidad(conexion, transaccion, producto, Convert.ToInt32(cantidadProducto.Value));
                 using SqlCommand insertar = new SqlCommand("""
                     INSERT INTO POS.DETALLE_PEDIDO (PEDIDO_ID,PRODUCTO_ID,CANTIDAD,PRECIO_UNITARIO,NOTAS,ESTADO_ID,MINUTOS_PREPARACION)
                     SELECT @Pedido,producto.PRODUCTO_ID,@Cantidad,producto.PRECIO_UNITARIO,@Notas,@Estado,@Minutos
@@ -312,6 +313,49 @@ namespace PollosTrack.POS.Forms
             {
                 try { CargarLineasPedido(); }
                 catch (Exception excepcion) { MessageBox.Show(this, "El producto se guardó. Pulsa Actualizar para verlo.\r\n" + excepcion.Message); }
+            }
+        }
+
+        // Comprueba existencias al pedir, restando lo comprometido en otras cuentas sin facturar.
+        private void ValidarDisponibilidad(SqlConnection conexion, SqlTransaction transaccion, Producto producto, int cantidad)
+        {
+            using SqlCommand inventario = new SqlCommand(
+                "SELECT STOCK_ACTUAL,CONTROLA_STOCK FROM INV.INVENTARIO WITH (UPDLOCK,HOLDLOCK) WHERE PRODUCTO_ID=@Producto",
+                conexion, transaccion);
+            inventario.Parameters.Add("@Producto", SqlDbType.Int).Value = producto.ProductoId;
+            int existencias;
+            bool controlaStock;
+            using (SqlDataReader lector = inventario.ExecuteReader())
+            {
+                if (!lector.Read())
+                {
+                    throw new InvalidOperationException($"Configura {producto.Nombre} en Inventario antes de agregarlo.");
+                }
+                existencias = lector.GetInt32(0);
+                controlaStock = lector.GetBoolean(1);
+            }
+            if (!controlaStock) return;
+
+            // Incluye cantidades ya pedidas en esta misma cuenta y en las demás mesas.
+            // Son reservas lógicas: la salida física se registra al entregar desde el monitor.
+            using SqlCommand reservas = new SqlCommand("""
+                SELECT COALESCE(SUM(detalle.CANTIDAD),0)
+                FROM POS.DETALLE_PEDIDO detalle
+                JOIN POS.ENCABEZADO_PEDIDO pedido ON pedido.PEDIDO_ID=detalle.PEDIDO_ID
+                JOIN CAT.ESTADOS estadoDetalle ON estadoDetalle.ESTADO_ID=detalle.ESTADO_ID
+                JOIN CAT.ESTADOS estadoPedido ON estadoPedido.ESTADO_ID=pedido.ESTADO_ID
+                WHERE detalle.PRODUCTO_ID=@Producto
+                    AND estadoDetalle.ENTIDAD='DETALLE_PEDIDO' AND estadoDetalle.CODIGO IN ('PENDIENTE','EN_PREPARACION')
+                    AND estadoPedido.ENTIDAD='ENCABEZADO_PEDIDO'
+                    AND estadoPedido.CODIGO IN ('ABIERTO','POR_COBRAR','POR COBRAR')
+                    AND NOT EXISTS (SELECT 1 FROM POS.FACTURAS factura WHERE factura.PEDIDO_ID=pedido.PEDIDO_ID);
+                """, conexion, transaccion);
+            reservas.Parameters.Add("@Producto", SqlDbType.Int).Value = producto.ProductoId;
+            int comprometidas = Convert.ToInt32(reservas.ExecuteScalar());
+            int disponibles = Math.Max(0, existencias - comprometidas);
+            if (cantidad > disponibles)
+            {
+                throw new InvalidOperationException($"No hay suficientes unidades de {producto.Nombre}. Disponibles para pedir: {disponibles}.");
             }
         }
 

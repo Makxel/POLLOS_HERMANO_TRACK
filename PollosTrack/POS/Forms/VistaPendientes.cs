@@ -159,6 +159,18 @@ namespace PollosTrack.POS.Forms
             botonAccion.Tag = detalle;
             botonAccion.Click += AlCambiarEstadoDetalle;
             tarjeta.Controls.Add(botonAccion);
+            if (Convert.ToString(detalle["CODIGO"]) == "PENDIENTE")
+            {
+                Button botonCancelar = new Button();
+                botonCancelar.Text = "Cancelar producto";
+                botonCancelar.Width = LogicalToDeviceUnits(265);
+                botonCancelar.Height = LogicalToDeviceUnits(34);
+                botonCancelar.FlatStyle = FlatStyle.Flat;
+                botonCancelar.BackColor = Color.FromArgb(247, 214, 214);
+                botonCancelar.Tag = detalle;
+                botonCancelar.Click += AlCancelarDetalle;
+                tarjeta.Controls.Add(botonCancelar);
+            }
         }
 
         // Mantiene el texto dentro del ancho de la tarjeta y permite notas largas.
@@ -172,49 +184,140 @@ namespace PollosTrack.POS.Forms
             return etiqueta;
         }
 
-        // Actualiza solo si el detalle conserva su estado anterior: evita dobles finalizaciones.
+        // Solicita la transición apropiada a partir de la tarjeta que se está mostrando.
         private void AlCambiarEstadoDetalle(object? origen, EventArgs argumentos)
         {
             if (origen is not Button boton || boton.Tag is not DataRow detalle) return;
+            string anterior = Convert.ToString(detalle["CODIGO"])!;
+            string siguiente = "EN_PREPARACION";
+            if (anterior == "EN_PREPARACION") siguiente = "ENTREGADO";
+            ProcesarCambioDetalle(boton, detalle, siguiente);
+        }
+
+        // Cancelar antes de iniciar libera la reserva sin modificar las existencias físicas.
+        private void AlCancelarDetalle(object? origen, EventArgs argumentos)
+        {
+            if (origen is not Button boton || boton.Tag is not DataRow detalle) return;
+            if (MessageBox.Show(this, "¿Cancelar este producto pendiente?", "Cancelar producto",
+                MessageBoxButtons.YesNo) != DialogResult.Yes) return;
+            ProcesarCambioDetalle(boton, detalle, "CANCELADO");
+        }
+
+        // Confirma estado y salida dentro de la misma transacción y luego recarga la lista.
+        private void ProcesarCambioDetalle(Button boton, DataRow detalle, string siguiente)
+        {
             boton.Enabled = false;
             try
             {
-                string anterior = Convert.ToString(detalle["CODIGO"])!;
-                string siguiente = "EN_PREPARACION";
-                if (anterior == "EN_PREPARACION") siguiente = "ENTREGADO";
                 using SqlConnection conexion = new conexion_sql_server().AbrirConexion();
-                using SqlCommand buscarEstado = new SqlCommand(
-                    "SELECT ESTADO_ID FROM CAT.ESTADOS WHERE ENTIDAD='DETALLE_PEDIDO' AND CODIGO=@Codigo", conexion);
-                buscarEstado.Parameters.Add("@Codigo", SqlDbType.VarChar, 20).Value = siguiente;
-                object? resultado = buscarEstado.ExecuteScalar();
-                if (resultado == null) throw new InvalidOperationException("No está configurado el estado " + siguiente);
-                string consulta = """
-                    UPDATE detalle SET ESTADO_ID=@Estado,
-                        MINUTOS_PREPARACION=CASE
-                            WHEN @Finalizar=0 THEN detalle.MINUTOS_PREPARACION
-                            WHEN detalle.FECHA_REGISTRO IS NULL THEN NULL
-                            WHEN detalle.FECHA_REGISTRO>GETDATE() THEN 0
-                            ELSE DATEDIFF(SECOND,detalle.FECHA_REGISTRO,GETDATE())/60 END
-                    FROM POS.DETALLE_PEDIDO detalle
-                    JOIN CAT.ESTADOS estado ON estado.ESTADO_ID=detalle.ESTADO_ID
-                    JOIN POS.ENCABEZADO_PEDIDO pedido ON pedido.PEDIDO_ID=detalle.PEDIDO_ID
-                    JOIN CAT.ESTADOS estadoPedido ON estadoPedido.ESTADO_ID=pedido.ESTADO_ID
-                    WHERE detalle.DETALLE_ID=@Detalle AND estado.ENTIDAD='DETALLE_PEDIDO' AND estado.CODIGO=@Anterior
-                        AND estadoPedido.ENTIDAD='ENCABEZADO_PEDIDO'
-                        AND estadoPedido.CODIGO IN ('ABIERTO','POR_COBRAR','POR COBRAR');
-                    """;
-                using SqlCommand actualizar = new SqlCommand(consulta, conexion);
-                // SQL usa su reloj para guardar minutos completos desde el registro.
-                actualizar.Parameters.Add("@Finalizar", SqlDbType.Bit).Value = siguiente == "ENTREGADO";
-                actualizar.Parameters.Add("@Estado", SqlDbType.Int).Value = Convert.ToInt32(resultado);
-                actualizar.Parameters.Add("@Detalle", SqlDbType.Int).Value = Convert.ToInt32(detalle["DETALLE_ID"]);
-                actualizar.Parameters.Add("@Anterior", SqlDbType.VarChar, 20).Value = anterior;
-                if (actualizar.ExecuteNonQuery() == 0)
-                    MessageBox.Show(this, "El detalle o la cuenta cambió de estado. Se actualizará la lista.");
+                using SqlTransaction transaccion = conexion.BeginTransaction();
+                int detalleId = Convert.ToInt32(detalle["DETALLE_ID"]);
+                string anterior = Convert.ToString(detalle["CODIGO"])!;
+                CambiarEstadoDetalle(conexion, transaccion, detalleId, anterior, siguiente);
+                transaccion.Commit();
             }
             catch (Exception excepcion) { MessageBox.Show(this, excepcion.Message, "No se pudo cambiar el estado"); }
             finally { boton.Enabled = true; }
             CargarPedidos();
+        }
+
+        // Lee los datos actuales bajo bloqueo: no confía en una tarjeta que puede estar desactualizada.
+        private void CambiarEstadoDetalle(SqlConnection conexion, SqlTransaction transaccion,
+            int detalleId, string anterior, string siguiente)
+        {
+            bool transicionValida = anterior == "PENDIENTE" && (siguiente == "EN_PREPARACION" || siguiente == "CANCELADO");
+            if (anterior == "EN_PREPARACION" && siguiente == "ENTREGADO") transicionValida = true;
+            if (!transicionValida) throw new InvalidOperationException("El cambio de estado no está permitido.");
+
+            // Bloquea primero el encabezado, siguiendo el mismo orden que al agregar productos.
+            using SqlCommand bloquearPedido = new SqlCommand("""
+                SELECT estado.CODIGO FROM POS.ENCABEZADO_PEDIDO pedido WITH (UPDLOCK,HOLDLOCK)
+                JOIN CAT.ESTADOS estado ON estado.ESTADO_ID=pedido.ESTADO_ID
+                WHERE pedido.PEDIDO_ID=(SELECT PEDIDO_ID FROM POS.DETALLE_PEDIDO WHERE DETALLE_ID=@Detalle)
+                    AND estado.ENTIDAD='ENCABEZADO_PEDIDO';
+                """, conexion, transaccion);
+            bloquearPedido.Parameters.Add("@Detalle", SqlDbType.Int).Value = detalleId;
+            string estadoPedido = Convert.ToString(bloquearPedido.ExecuteScalar())!;
+            if (estadoPedido != "ABIERTO" && estadoPedido != "POR_COBRAR" && estadoPedido != "POR COBRAR")
+                throw new InvalidOperationException("La cuenta ya no permite modificar productos.");
+
+            int productoId;
+            int cantidad;
+            using SqlCommand leerDetalle = new SqlCommand("""
+                SELECT detalle.PRODUCTO_ID,detalle.CANTIDAD,estado.CODIGO
+                FROM POS.DETALLE_PEDIDO detalle WITH (UPDLOCK,HOLDLOCK)
+                JOIN CAT.ESTADOS estado ON estado.ESTADO_ID=detalle.ESTADO_ID
+                WHERE detalle.DETALLE_ID=@Detalle AND estado.ENTIDAD='DETALLE_PEDIDO';
+                """, conexion, transaccion);
+            leerDetalle.Parameters.Add("@Detalle", SqlDbType.Int).Value = detalleId;
+            using (SqlDataReader lector = leerDetalle.ExecuteReader())
+            {
+                if (!lector.Read() || lector.GetString(2) != anterior)
+                    throw new InvalidOperationException("El producto cambió de estado. Actualiza el monitor.");
+                productoId = lector.GetInt32(0);
+                cantidad = lector.GetInt32(1);
+            }
+            using SqlCommand buscarEstado = new SqlCommand(
+                "SELECT ESTADO_ID FROM CAT.ESTADOS WHERE ENTIDAD='DETALLE_PEDIDO' AND CODIGO=@Codigo", conexion, transaccion);
+            buscarEstado.Parameters.Add("@Codigo", SqlDbType.VarChar, 20).Value = siguiente;
+            object? estadoId = buscarEstado.ExecuteScalar();
+            if (estadoId == null) throw new InvalidOperationException("Falta configurar el estado " + siguiente);
+
+            // Solo entregar produce una salida. Iniciar y cancelar no descuentan stock.
+            if (siguiente == "ENTREGADO")
+                RegistrarSalidaEntrega(conexion, transaccion, detalleId, productoId, cantidad);
+
+            using SqlCommand actualizar = new SqlCommand("""
+                UPDATE POS.DETALLE_PEDIDO SET ESTADO_ID=@Estado,
+                    MINUTOS_PREPARACION=CASE
+                        WHEN @Finalizar=0 THEN MINUTOS_PREPARACION
+                        WHEN FECHA_REGISTRO IS NULL THEN NULL
+                        WHEN FECHA_REGISTRO>GETDATE() THEN 0
+                        ELSE DATEDIFF(SECOND,FECHA_REGISTRO,GETDATE())/60 END
+                WHERE DETALLE_ID=@Detalle;
+                """, conexion, transaccion);
+            actualizar.Parameters.Add("@Finalizar", SqlDbType.Bit).Value = siguiente == "ENTREGADO";
+            actualizar.Parameters.Add("@Estado", SqlDbType.Int).Value = Convert.ToInt32(estadoId);
+            actualizar.Parameters.Add("@Detalle", SqlDbType.Int).Value = detalleId;
+            actualizar.ExecuteNonQuery();
+        }
+
+        // Descuenta unidades y registra una salida referenciada al detalle, no a la factura.
+        private void RegistrarSalidaEntrega(SqlConnection conexion, SqlTransaction transaccion,
+            int detalleId, int productoId, int cantidad)
+        {
+            using SqlCommand inventario = new SqlCommand(
+                "SELECT CONTROLA_STOCK FROM INV.INVENTARIO WITH (UPDLOCK,HOLDLOCK) WHERE PRODUCTO_ID=@Producto", conexion, transaccion);
+            inventario.Parameters.Add("@Producto", SqlDbType.Int).Value = productoId;
+            object? controlaStock = inventario.ExecuteScalar();
+            if (controlaStock == null) throw new InvalidOperationException("Falta configurar el producto en Inventario.");
+            if (!Convert.ToBoolean(controlaStock)) return;
+
+            // La comprobación protege ante ajustes de inventario posteriores a la reserva.
+            using SqlCommand descontar = new SqlCommand("""
+                UPDATE INV.INVENTARIO SET STOCK_ACTUAL=STOCK_ACTUAL-@Cantidad,ULTIMA_ACTUALIZACION=GETDATE()
+                WHERE PRODUCTO_ID=@Producto AND STOCK_ACTUAL>=@Cantidad;
+                """, conexion, transaccion);
+            descontar.Parameters.Add("@Producto", SqlDbType.Int).Value = productoId;
+            descontar.Parameters.Add("@Cantidad", SqlDbType.Int).Value = cantidad;
+            if (descontar.ExecuteNonQuery() != 1)
+                throw new InvalidOperationException("Las existencias cambiaron y no alcanzan para entregar. Revisa Inventario.");
+
+            // Hasta incorporar sesiones, las operaciones se atribuyen al usuario Sistema existente.
+            using SqlCommand usuario = new SqlCommand(
+                "SELECT USUARIO_ID FROM SEG.USUARIOS WHERE USERNAME='Sistema' AND ACTIVO=1", conexion, transaccion);
+            object? usuarioId = usuario.ExecuteScalar();
+            if (usuarioId == null) throw new InvalidOperationException("No existe el usuario Sistema activo.");
+            using SqlCommand movimiento = new SqlCommand("""
+                INSERT INTO INV.MOVIMIENTOS_INVENTARIO
+                    (PRODUCTO_ID,USUARIO_ID,TIPO_MOVIMIENTO,CANTIDAD,MOTIVO,REFERENCIA_ID)
+                VALUES (@Producto,@Usuario,'SALIDA',@Cantidad,'ENTREGA_PEDIDO',@Detalle);
+                """, conexion, transaccion);
+            movimiento.Parameters.Add("@Producto", SqlDbType.Int).Value = productoId;
+            movimiento.Parameters.Add("@Usuario", SqlDbType.Int).Value = Convert.ToInt32(usuarioId);
+            movimiento.Parameters.Add("@Cantidad", SqlDbType.Int).Value = cantidad;
+            movimiento.Parameters.Add("@Detalle", SqlDbType.Int).Value = detalleId;
+            movimiento.ExecuteNonQuery();
         }
     }
 }

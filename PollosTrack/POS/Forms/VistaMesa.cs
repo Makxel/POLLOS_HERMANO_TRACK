@@ -378,7 +378,7 @@ namespace PollosTrack.POS.Forms
 
             botonVerComandas.Visible = ocupada || porCobrar;
             botonNuevaCuenta.Visible = disponible || ocupada || porCobrar;
-            botonIrAFacturacion.Visible = porCobrar;
+            botonIrAFacturacion.Visible = ocupada || porCobrar;
             botonNuevaCuenta.Text = "Nueva cuenta separada";
             if (disponible)
             {

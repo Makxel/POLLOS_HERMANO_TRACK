@@ -8,6 +8,13 @@ namespace PollosTrack
         public FormPrincipal()
         {
             InitializeComponent();
+            // La imagen va incluida en el ejecutable y conserva sus proporciones con Zoom.
+            using Stream? archivoLogo = typeof(FormPrincipal).Assembly.GetManifestResourceStream("PollosTrack.LogoEmpresa");
+            if (archivoLogo != null)
+            {
+                using Image logo = Image.FromStream(archivoLogo);
+                imagenLogo.Image = new Bitmap(logo);
+            }
         }
 
         // Muestra u oculta las opciones del módulo POS.
@@ -48,6 +55,11 @@ namespace PollosTrack
             MostrarVista(vistaFacturacion, "POS · Facturación", botonFacturacion);
         }
 
+        // Consulta pedidos históricos y permite volver a visualizar sus recibos.
+        private void AlAbrirHistorial(object? origen, EventArgs argumentos)
+        {
+            MostrarVista(new VistaHistorial(), "POS · Historial de pedidos", botonHistorial);
+        }
         // Abre Comandas con la mesa elegida, sin asumir que tiene un único pedido.
         private void AlVerComandasDeMesa(object? origen, EventArgs argumentos)
         {
@@ -124,7 +136,7 @@ namespace PollosTrack
         private void MarcarBotonSeleccionado(Button botonSeleccionado)
         {
             Button[] botonesNavegacion =
-                { botonInicio, botonMesas, botonComandas, botonPendientes, botonFacturacion };
+                { botonInicio, botonMesas, botonComandas, botonPendientes, botonFacturacion, botonHistorial };
 
             foreach (Button boton in botonesNavegacion)
             {

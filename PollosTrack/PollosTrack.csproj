@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
@@ -9,7 +9,17 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <EmbeddedResource Include="Utils/Los_Pollos_Hermanos.png" LogicalName="PollosTrack.LogoEmpresa" />
     <PackageReference Include="Microsoft.Data.SqlClient" Version="7.1.1" />
+    <PackageReference Include="QuestPDF" Version="2026.9.1" />
+    <PackageReference Include="PdfiumViewer" Version="2.13.0" />
+    <PackageReference Include="PdfiumViewer.Native.x86_64.v8-xfa" Version="2018.4.8.256" GeneratePathProperty="true" />
+    <PackageReference Include="PdfiumViewer.Native.x86.v8-xfa" Version="2018.4.8.256" GeneratePathProperty="true" />
   </ItemGroup>
 
+  <!-- Los paquetes nativos antiguos no copian sus DLL automáticamente con PackageReference. -->
+  <ItemGroup>
+    <None Include="$(PkgPdfiumViewer_Native_x86_64_v8-xfa)/build/x64/pdfium.dll" Link="x64/pdfium.dll" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <None Include="$(PkgPdfiumViewer_Native_x86_v8-xfa)/build/x86/pdfium.dll" Link="x86/pdfium.dll" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
 </Project>
