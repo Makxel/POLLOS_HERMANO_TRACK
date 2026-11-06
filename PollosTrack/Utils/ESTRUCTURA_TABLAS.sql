@@ -1,0 +1,281 @@
+CREATE DATABASE POLLOS_HERMANOS_TRACK;
+
+USE POLLOS_HERMANOS_TRACK
+GO
+
+-- 1. ESQUEMAS
+
+CREATE SCHEMA SEG;
+GO
+CREATE SCHEMA CAT;
+GO
+CREATE SCHEMA POS;
+GO
+CREATE SCHEMA INV;
+GO
+
+-- 2. SEGURIDAD
+
+CREATE TABLE SEG.ROLES (
+    ROL_ID INT IDENTITY(1,1) PRIMARY KEY,
+    NOMBRE VARCHAR(50) NOT NULL UNIQUE,
+    DESCRIPCION VARCHAR(150) NULL
+);
+
+CREATE TABLE SEG.USUARIOS (
+    USUARIO_ID INT IDENTITY(1,1) PRIMARY KEY,
+    ROL_ID INT NOT NULL,
+    NOMBRE_COMPLETO VARCHAR(100) NOT NULL,
+    USERNAME VARCHAR(50) NOT NULL UNIQUE,
+    PASSWORD_HASH VARCHAR(256) NOT NULL,
+    ACTIVO BIT NOT NULL DEFAULT 1,
+    FECHA_REGISTRO DATETIME DEFAULT GETDATE(),
+    CONSTRAINT FK_USUARIOS_ROLES FOREIGN KEY (ROL_ID) REFERENCES SEG.ROLES(ROL_ID)
+);
+
+-- 3. CATÁLOGOS
+
+CREATE TABLE CAT.CATEGORIAS (
+    CATEGORIA_ID INT IDENTITY(1,1) PRIMARY KEY,
+    NOMBRE VARCHAR(50) NOT NULL UNIQUE,
+    ACTIVO BIT NOT NULL DEFAULT 1
+);
+
+CREATE TABLE CAT.ESTADOS
+(
+    ESTADO_ID INT IDENTITY(1,1) NOT NULL CONSTRAINT PK_ESTADOS PRIMARY KEY,
+    ENTIDAD VARCHAR(25) NOT NULL,
+    CODIGO VARCHAR(20) NOT NULL,
+    NOMBRE NVARCHAR(40) NOT NULL,
+    COLOR_HEX VARCHAR(7) NOT NULL,
+    ORDEN INT NOT NULL,
+    CONSTRAINT UQ_ESTADOS_ENTIDAD_CODIGO UNIQUE (ENTIDAD, CODIGO),
+);
+
+CREATE TABLE CAT.PRODUCTOS (
+    PRODUCTO_ID INT IDENTITY(1,1) PRIMARY KEY,
+    CATEGORIA_ID INT NOT NULL,
+    NOMBRE VARCHAR(100) NOT NULL,
+    DESCRIPCION VARCHAR(250) NULL,
+    PRECIO_UNITARIO DECIMAL(10,2) NOT NULL CHECK (PRECIO_UNITARIO >= 0),
+    APLICA_IVA BIT NOT NULL DEFAULT 1,
+    ACTIVO BIT NOT NULL DEFAULT 1,
+    CONSTRAINT FK_PRODUCTOS_CATEGORIAS FOREIGN KEY (CATEGORIA_ID) REFERENCES CAT.CATEGORIAS(CATEGORIA_ID)
+);
+
+CREATE TABLE CAT.MESAS (
+    MESA_ID INT IDENTITY(1,1) PRIMARY KEY,
+    NUMERO INT NOT NULL UNIQUE,
+    CAPACIDAD INT NOT NULL DEFAULT 4,
+    ESTADO_ID INT NOT NULL,
+
+	CONSTRAINT FK_MESAS_ESTADO FOREIGN KEY (ESTADO_ID) REFERENCES CAT.ESTADOS(ESTADO_ID)
+);
+
+CREATE TABLE CAT.CLIENTES (
+    CLIENTE_ID INT IDENTITY(1,1) PRIMARY KEY,
+    IDENTIFICACION VARCHAR(20) NULL,
+    NOMBRE VARCHAR(120) NOT NULL DEFAULT 'Consumidor Final',
+    TELEFONO VARCHAR(20) NULL
+);
+
+-- 4. TRANSACCIONES POS
+
+CREATE TABLE POS.ENCABEZADO_PEDIDO (
+    PEDIDO_ID INT IDENTITY(1,1) PRIMARY KEY,
+    MESA_ID INT NOT NULL,
+    USUARIO_ID INT NOT NULL,
+    CLIENTE_ID INT NOT NULL DEFAULT 1,
+	NOMBRE_REFERENCIA VARCHAR(50) NULL,
+    FECHA_REGISTRO DATETIME DEFAULT GETDATE(),
+    FECHA_FINALIZADO DATETIME NULL,
+    ESTADO_ID INT NOT NULL,
+
+    CONSTRAINT FK_PEDIDOS_MESAS FOREIGN KEY (MESA_ID) REFERENCES CAT.MESAS(MESA_ID),
+    CONSTRAINT FK_PEDIDOS_USUARIOS FOREIGN KEY (USUARIO_ID) REFERENCES SEG.USUARIOS(USUARIO_ID),
+    CONSTRAINT FK_PEDIDOS_CLIENTES FOREIGN KEY (CLIENTE_ID) REFERENCES CAT.CLIENTES(CLIENTE_ID),
+	CONSTRAINT FK_PEDIDOS_ESTADO FOREIGN KEY (ESTADO_ID) REFERENCES CAT.ESTADOS(ESTADO_ID)
+);
+
+CREATE TABLE POS.DETALLE_PEDIDO (
+    DETALLE_ID INT IDENTITY(1,1) PRIMARY KEY,
+    PEDIDO_ID INT NOT NULL,
+    PRODUCTO_ID INT NOT NULL,
+    CANTIDAD INT NOT NULL CHECK (CANTIDAD > 0),
+    PRECIO_UNITARIO DECIMAL(10,2) NOT NULL,
+    NOTAS VARCHAR(150) NULL,
+    ESTADO_ID INT NOT NULL,
+	MINUTOS_PREPARACION INT NULL,
+    FECHA_REGISTRO DATETIME DEFAULT GETDATE(),
+    CONSTRAINT FK_DETALLES_PEDIDOS FOREIGN KEY (PEDIDO_ID) REFERENCES POS.ENCABEZADO_PEDIDO(PEDIDO_ID),
+    CONSTRAINT FK_DETALLES_PRODUCTOS FOREIGN KEY (PRODUCTO_ID) REFERENCES CAT.PRODUCTOS(PRODUCTO_ID),
+	CONSTRAINT FK_DETALLES_ESTADO FOREIGN KEY (ESTADO_ID) REFERENCES CAT.ESTADOS(ESTADO_ID)
+);
+
+CREATE TABLE POS.FACTURAS (
+    FACTURA_ID INT IDENTITY(1,1) PRIMARY KEY,
+    PEDIDO_ID INT NOT NULL UNIQUE,
+    USUARIO_ID INT NOT NULL,
+    FECHA_REGISTRO DATETIME DEFAULT GETDATE(),
+    SUBTOTAL DECIMAL(10,2) NOT NULL CHECK (SUBTOTAL >= 0),
+    MONTO_IVA DECIMAL(10,2) NOT NULL CHECK (MONTO_IVA >= 0),
+    TOTAL DECIMAL(10,2) NOT NULL CHECK (TOTAL >= 0),
+    METODO_PAGO VARCHAR(20) NOT NULL CHECK (METODO_PAGO IN ('Efectivo', 'Tarjeta', 'Transferencia')),
+    MONTO_RECIBIDO DECIMAL(10,2) NULL,
+    CAMBIO_DEVUELTO DECIMAL(10,2) NULL,
+    CONSTRAINT FK_FACTURAS_PEDIDOS FOREIGN KEY (PEDIDO_ID) REFERENCES POS.ENCABEZADO_PEDIDO(PEDIDO_ID),
+    CONSTRAINT FK_FACTURAS_USUARIOS FOREIGN KEY (USUARIO_ID) REFERENCES SEG.USUARIOS(USUARIO_ID)
+);
+
+-- 5. INVENTARIO
+
+CREATE TABLE INV.INVENTARIO (
+    INVENTARIO_ID INT IDENTITY(1,1) PRIMARY KEY,
+    PRODUCTO_ID INT NOT NULL UNIQUE,
+    STOCK_ACTUAL INT NOT NULL DEFAULT 0 CHECK (STOCK_ACTUAL >= 0),
+    STOCK_MINIMO INT,
+    CONTROLA_STOCK BIT NOT NULL DEFAULT 1,
+    ULTIMA_ACTUALIZACION DATETIME DEFAULT GETDATE(),
+    CONSTRAINT FK_INVENTARIO_PRODUCTOS FOREIGN KEY (PRODUCTO_ID) REFERENCES CAT.PRODUCTOS(PRODUCTO_ID)
+);
+
+CREATE TABLE INV.MOVIMIENTOS_INVENTARIO (
+    MOVIMIENTO_ID INT IDENTITY(1,1) PRIMARY KEY,
+    PRODUCTO_ID INT NOT NULL,
+    USUARIO_ID INT NOT NULL,
+    TIPO_MOVIMIENTO VARCHAR(25),
+    CANTIDAD INT NOT NULL CHECK (CANTIDAD > 0),
+    MOTIVO VARCHAR(50) NOT NULL,
+    REFERENCIA_ID INT NULL,
+    FECHA_REGISTRO DATETIME DEFAULT GETDATE(),
+    CONSTRAINT FK_MOVIMIENTOS_PRODUCTOS FOREIGN KEY (PRODUCTO_ID) REFERENCES CAT.PRODUCTOS(PRODUCTO_ID),
+    CONSTRAINT FK_MOVIMIENTOS_USUARIOS FOREIGN KEY (USUARIO_ID) REFERENCES SEG.USUARIOS(USUARIO_ID)
+);
+GO
+
+-- Estados de submodulo de POS
+
+--INSERT INTO CAT.ESTADOS (ENTIDAD, CODIGO, NOMBRE, COLOR_HEX, ORDEN)
+--VALUES
+---- Mesas
+--('MESA', 'DISPONIBLE', 'Disponible', '#DCEFE4', 1),
+--('MESA', 'OCUPADA', 'Ocupada', '#FFD166', 2),
+--('MESA', 'POR_COBRAR', 'Por cobrar', '#BFD8FA', 3),
+
+---- Encabezado del pedido
+--('ENCABEZADO_PEDIDO', 'ABIERTO', 'Abierto', '#FFD166', 1),
+--('ENCABEZADO_PEDIDO', 'POR_COBRAR', 'Por cobrar', '#BFD8FA', 2),
+--('ENCABEZADO_PEDIDO', 'CERRADO', 'Cerrado', '#DCEFE4', 3),
+--('ENCABEZADO_PEDIDO', 'CANCELADO', 'Cancelado', '#F7D6D6', 4),
+
+---- Detalle del pedido
+--('DETALLE_PEDIDO', 'PENDIENTE', 'Pendiente', '#FFD166', 1),
+--('DETALLE_PEDIDO', 'EN_PREPARACION', 'En preparación', '#BFD8FA', 2),
+--('DETALLE_PEDIDO', 'ENTREGADO', 'Entregado', '#DCEFE4', 3),
+--('DETALLE_PEDIDO', 'CANCELADO', 'Cancelado', '#F7D6D6', 4);
+
+
+
+-- Insercion de datos de prueba para tabla CATEGORIAS y PRODUCTOS
+
+--BEGIN TRANSACTION;
+
+---- Categorías del menú.
+--INSERT INTO CAT.CATEGORIAS (NOMBRE, ACTIVO)
+--SELECT nuevos.NOMBRE, 1
+--FROM (VALUES
+--    ('Pollo frito'),
+--    ('Combos'),
+--    ('Acompañamientos'),
+--    ('Bebidas'),
+--    ('Postres')
+--) AS nuevos(NOMBRE)
+--WHERE NOT EXISTS (
+--    SELECT 1
+--    FROM CAT.CATEGORIAS
+--    WHERE NOMBRE = nuevos.NOMBRE
+--);
+
+---- Productos: precios unitarios de ejemplo, antes de IVA.
+--INSERT INTO CAT.PRODUCTOS (
+--    CATEGORIA_ID,
+--    NOMBRE,
+--    DESCRIPCION,
+--    PRECIO_UNITARIO,
+--    APLICA_IVA,
+--    ACTIVO
+--)
+--SELECT
+--    categoria.CATEGORIA_ID,
+--    nuevos.NOMBRE,
+--    nuevos.DESCRIPCION,
+--    nuevos.PRECIO,
+--    1,
+--    1
+--FROM (VALUES
+--    ('Pollo frito', 'Pieza de pollo original',
+--     'Una pieza de pollo frito con empanizado original.', 65.00),
+
+--    ('Pollo frito', 'Pieza de pollo picante',
+--     'Una pieza de pollo frito con empanizado picante.', 70.00),
+
+--    ('Pollo frito', 'Alitas tradicionales',
+--     'Orden de seis alitas con salsa a elección.', 185.00),
+
+--    ('Pollo frito', 'Tiras de pollo',
+--     'Cuatro tiras de pechuga empanizadas con salsa de la casa.', 155.00),
+
+--    ('Combos', 'Combo individual',
+--     'Dos piezas de pollo, papas pequeñas y una gaseosa de 355 ml.', 195.00),
+
+--    ('Combos', 'Combo tres piezas',
+--     'Tres piezas de pollo, papas medianas y una gaseosa de 355 ml.', 265.00),
+
+--    ('Combos', 'Combo de tiras',
+--     'Cuatro tiras de pollo, papas pequeñas y una gaseosa de 355 ml.', 225.00),
+
+--    ('Combos', 'Combo familiar',
+--     'Ocho piezas de pollo, papas grandes, ensalada grande y gaseosa de 2 litros.', 720.00),
+
+--    ('Acompañamientos', 'Papas fritas pequeñas',
+--     'Porción individual de papas fritas.', 45.00),
+
+--    ('Acompañamientos', 'Papas fritas grandes',
+--     'Porción de papas fritas para compartir.', 90.00),
+
+--    ('Acompañamientos', 'Ensalada de repollo',
+--     'Porción individual de ensalada cremosa de repollo y zanahoria.', 40.00),
+
+--    ('Acompañamientos', 'Puré de papas',
+--     'Porción individual de puré de papas con salsa.', 45.00),
+
+--    ('Acompañamientos', 'Salsa adicional',
+--     'Una porción de salsa de la casa.', 15.00),
+
+--    ('Bebidas', 'Gaseosa de 355 ml',
+--     'Gaseosa individual; indicar el sabor en las notas.', 35.00),
+
+--    ('Bebidas', 'Gaseosa de 2 litros',
+--     'Botella de gaseosa para compartir.', 85.00),
+
+--    ('Bebidas', 'Agua embotellada de 600 ml',
+--     'Botella individual de agua purificada.', 30.00),
+
+--    ('Bebidas', 'Limonada natural',
+--     'Vaso de limonada natural de 450 ml.', 45.00),
+
+--    ('Postres', 'Brownie de chocolate',
+--     'Porción individual de brownie de chocolate.', 55.00),
+
+--    ('Postres', 'Flan de caramelo',
+--     'Porción individual de flan con caramelo.', 50.00)
+--) AS nuevos(CATEGORIA, NOMBRE, DESCRIPCION, PRECIO)
+--INNER JOIN CAT.CATEGORIAS AS categoria
+--    ON categoria.NOMBRE = nuevos.CATEGORIA
+--WHERE NOT EXISTS (
+--    SELECT 1
+--    FROM CAT.PRODUCTOS
+--    WHERE NOMBRE = nuevos.NOMBRE
+--);
+
+--COMMIT TRANSACTION;
