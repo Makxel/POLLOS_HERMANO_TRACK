@@ -1,3 +1,6 @@
+using System;
+using System.Windows.Forms;
+using PollosTrack.Inventario.Forms;
 using PollosTrack.POS.Forms;
 
 namespace PollosTrack
@@ -8,6 +11,10 @@ namespace PollosTrack
         public FormPrincipal()
         {
             InitializeComponent();
+
+            // Conectar el botón de Inventario
+            botonInventario.Click += BotonInventario_Click;
+            
             // La imagen va incluida en el ejecutable y conserva sus proporciones con Zoom.
             using Stream? archivoLogo = typeof(FormPrincipal).Assembly.GetManifestResourceStream("PollosTrack.LogoEmpresa");
             if (archivoLogo != null)
@@ -15,6 +22,22 @@ namespace PollosTrack
                 using Image logo = Image.FromStream(archivoLogo);
                 imagenLogo.Image = new Bitmap(logo);
             }
+        }
+        
+        private void BotonInventario_Click(object sender, EventArgs e)
+        {
+            // Limpiar el panel central
+            panelContenido.Controls.Clear();
+
+            // Crear el módulo de inventario
+            UC_Inventario modulo = new UC_Inventario();
+            modulo.Dock = DockStyle.Fill;
+
+            // Agregarlo al panel
+            panelContenido.Controls.Add(modulo);
+
+            // Cambiar el título
+            etiquetaTitulo.Text = "Inventario";
         }
 
         // Muestra u oculta las opciones del módulo POS.
