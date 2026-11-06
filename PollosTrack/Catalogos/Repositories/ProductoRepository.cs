@@ -82,5 +82,49 @@ namespace PollosTrack.Catalogos.Repositories
             conn.Open();
             cmd.ExecuteNonQuery();
         }
+
+
+        // Crea el producto y, si controla inventario, su fila en INV.INVENTARIO
+        public int Insertar(Producto p, bool controlaStock, int stockMinimo)
+        {
+            using var conn = Conexion.ObtenerConexion();
+            conn.Open();
+            using var tx = conn.BeginTransaction();
+            try
+            {
+                int id;
+                using (var cmd = new SqlCommand(
+                    @"INSERT INTO CAT.PRODUCTOS (CATEGORIA_ID, NOMBRE, DESCRIPCION, PRECIO_UNITARIO, APLICA_IVA, ACTIVO)
+                      OUTPUT INSERTED.PRODUCTO_ID
+                      VALUES (@categoria, @nombre, @descripcion, @precio, @iva, @activo)", conn, tx))
+                {
+                    cmd.Parameters.AddWithValue("@categoria", p.CategoriaId);
+                    cmd.Parameters.AddWithValue("@nombre", p.Nombre);
+                    cmd.Parameters.AddWithValue("@descripcion", (object?)p.Descripcion ?? DBNull.Value);
+                    cmd.Parameters.AddWithValue("@precio", p.PrecioUnitario);
+                    cmd.Parameters.AddWithValue("@iva", p.AplicaIva);
+                    cmd.Parameters.AddWithValue("@activo", p.Activo);
+                    id = (int)cmd.ExecuteScalar()!;
+                }
+
+                if (controlaStock)
+                {
+                    using var inv = new SqlCommand(
+                        @"INSERT INTO INV.INVENTARIO (PRODUCTO_ID, STOCK_ACTUAL, STOCK_MINIMO, CONTROLA_STOCK)
+                          VALUES (@id, 0, @minimo, 1)", conn, tx);
+                    inv.Parameters.AddWithValue("@id", id);
+                    inv.Parameters.AddWithValue("@minimo", stockMinimo);
+                    inv.ExecuteNonQuery();
+                }
+
+                tx.Commit();
+                return id;
+            }
+            catch
+            {
+                tx.Rollback();
+                throw;
+            }
+        }
     }
 }
