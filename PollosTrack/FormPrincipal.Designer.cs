@@ -26,12 +26,13 @@ namespace PollosTrack
             botonComandas = new Button();
             botonPendientes = new Button();
             botonFacturacion = new Button();
+            botonHistorial = new Button();
             botonPOS = new Button();
             botonInicio = new Button();
             panelEmpresa = new Panel();
             etiquetaDescripcion = new Label();
             etiquetaNombreEmpresa = new Label();
-            etiquetaLogo = new Label();
+            imagenLogo = new PictureBox();
             panelEncabezado = new Panel();
             etiquetaTitulo = new Label();
             panelContenido = new Panel();
@@ -156,7 +157,7 @@ namespace PollosTrack
             // 
             panelEmpresa.Controls.Add(etiquetaDescripcion);
             panelEmpresa.Controls.Add(etiquetaNombreEmpresa);
-            panelEmpresa.Controls.Add(etiquetaLogo);
+            panelEmpresa.Controls.Add(imagenLogo);
             panelEmpresa.Dock = DockStyle.Top;
             panelEmpresa.Location = new Point(0, 0);
             panelEmpresa.Margin = new Padding(3, 4, 3, 4);
@@ -185,17 +186,15 @@ namespace PollosTrack
             etiquetaNombreEmpresa.TabIndex = 1;
             etiquetaNombreEmpresa.Text = "POLLOSTRACK";
             // 
-            // etiquetaLogo
+            // imagenLogo
             // 
-            etiquetaLogo.BackColor = Color.FromArgb(255, 209, 79);
-            etiquetaLogo.Font = new Font("Segoe UI", 12F, FontStyle.Bold);
-            etiquetaLogo.ForeColor = Color.FromArgb(24, 49, 83);
-            etiquetaLogo.Location = new Point(83, 35);
-            etiquetaLogo.Name = "etiquetaLogo";
-            etiquetaLogo.Size = new Size(82, 96);
-            etiquetaLogo.TabIndex = 2;
-            etiquetaLogo.Text = "LOGO";
-            etiquetaLogo.TextAlign = ContentAlignment.MiddleCenter;
+            imagenLogo.BackColor = Color.Transparent;
+            imagenLogo.Location = new Point(83, 35);
+            imagenLogo.Name = "imagenLogo";
+            imagenLogo.Size = new Size(82, 96);
+            imagenLogo.TabIndex = 2;
+            imagenLogo.SizeMode = PictureBoxSizeMode.Zoom;
+            imagenLogo.TabStop = false;
             // 
             // panelEncabezado
             // 
@@ -235,13 +234,14 @@ namespace PollosTrack
             // FormPrincipal
             // 
             // Submenú POS: el orden de agregado permite apilar las opciones con Dock.Top.
+            panelSubmenuPOS.Controls.Add(botonHistorial);
             panelSubmenuPOS.Controls.Add(botonFacturacion);
             panelSubmenuPOS.Controls.Add(botonPendientes);
             panelSubmenuPOS.Controls.Add(botonComandas);
             panelSubmenuPOS.Controls.Add(botonMesas);
             panelSubmenuPOS.Dock = DockStyle.Top;
             panelSubmenuPOS.Name = "panelSubmenuPOS";
-            panelSubmenuPOS.Size = new Size(274, 176);
+            panelSubmenuPOS.Size = new Size(274, 220);
             panelSubmenuPOS.TabIndex = 2;
             panelSubmenuPOS.Visible = false;
             botonMesas.Dock = DockStyle.Top;
@@ -296,6 +296,19 @@ namespace PollosTrack
             botonFacturacion.FlatAppearance.BorderSize = 0;
             botonFacturacion.UseVisualStyleBackColor = false;
             botonFacturacion.Click += AlAbrirFacturacion;
+            botonHistorial.Name = "botonHistorial";
+            botonHistorial.Dock = DockStyle.Top;
+            botonHistorial.Size = new Size(274, 44);
+            botonHistorial.Text = "Historial de pedidos";
+            botonHistorial.TextAlign = ContentAlignment.MiddleLeft;
+            botonHistorial.Padding = new Padding(42, 0, 8, 0);
+            botonHistorial.TabIndex = 4;
+            botonHistorial.BackColor = Color.FromArgb(24, 49, 83);
+            botonHistorial.ForeColor = Color.White;
+            botonHistorial.FlatStyle = FlatStyle.Flat;
+            botonHistorial.FlatAppearance.BorderSize = 0;
+            botonHistorial.UseVisualStyleBackColor = false;
+            botonHistorial.Click += AlAbrirHistorial;
             AutoScaleDimensions = new SizeF(8F, 20F);
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(1257, 933);
@@ -321,9 +334,10 @@ namespace PollosTrack
         private Button botonComandas;
         private Button botonPendientes;
         private Button botonFacturacion;
+        private Button botonHistorial;
         private Panel panelBarraLateral;
         private Panel panelEmpresa;
-        private Label etiquetaLogo;
+        private PictureBox imagenLogo;
         private Label etiquetaNombreEmpresa;
         private Label etiquetaDescripcion;
         private Button botonInicio;
