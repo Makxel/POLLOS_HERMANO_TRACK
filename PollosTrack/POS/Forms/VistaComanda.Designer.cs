@@ -87,7 +87,7 @@ namespace PollosTrack.POS.Forms
             panelDetalle.RowStyles.Add(new RowStyle());
             panelDetalle.RowStyles.Add(new RowStyle(SizeType.Absolute, 240F));
             panelDetalle.RowStyles.Add(new RowStyle());
-            panelDetalle.Size = new Size(833, 646);
+            panelDetalle.Size = new Size(812, 646);
             panelDetalle.TabIndex = 4;
             // 
             // accionesDetalle
@@ -99,7 +99,7 @@ namespace PollosTrack.POS.Forms
             accionesDetalle.Dock = DockStyle.Fill;
             accionesDetalle.Location = new Point(23, 314);
             accionesDetalle.Name = "accionesDetalle";
-            accionesDetalle.Size = new Size(787, 46);
+            accionesDetalle.Size = new Size(766, 46);
             accionesDetalle.TabIndex = 0;
             // 
             // botonAgregarProducto
@@ -139,7 +139,7 @@ namespace PollosTrack.POS.Forms
             tablaDetalle.ReadOnly = true;
             tablaDetalle.RowHeadersVisible = false;
             tablaDetalle.RowHeadersWidth = 51;
-            tablaDetalle.Size = new Size(787, 234);
+            tablaDetalle.Size = new Size(766, 234);
             tablaDetalle.TabIndex = 1;
             // 
             // etiquetaSubtotal
@@ -169,7 +169,7 @@ namespace PollosTrack.POS.Forms
             selectorCuenta.Location = new Point(180, 26);
             selectorCuenta.Margin = new Padding(0, 6, 0, 12);
             selectorCuenta.Name = "selectorCuenta";
-            selectorCuenta.Size = new Size(633, 31);
+            selectorCuenta.Size = new Size(612, 31);
             selectorCuenta.TabIndex = 4;
             selectorCuenta.SelectedIndexChanged += AlElegirCuenta;
             // 
@@ -190,7 +190,7 @@ namespace PollosTrack.POS.Forms
             selectorCategoria.Location = new Point(180, 75);
             selectorCategoria.Margin = new Padding(0, 6, 0, 12);
             selectorCategoria.Name = "selectorCategoria";
-            selectorCategoria.Size = new Size(633, 31);
+            selectorCategoria.Size = new Size(612, 31);
             selectorCategoria.TabIndex = 6;
             selectorCategoria.SelectedIndexChanged += AlCambiarCategoria;
             // 
@@ -217,7 +217,7 @@ namespace PollosTrack.POS.Forms
             filaProducto.Name = "filaProducto";
             filaProducto.RowCount = 1;
             filaProducto.RowStyles.Add(new RowStyle());
-            filaProducto.Size = new Size(627, 48);
+            filaProducto.Size = new Size(606, 48);
             filaProducto.TabIndex = 8;
             // 
             // textoProducto
@@ -229,7 +229,7 @@ namespace PollosTrack.POS.Forms
             textoProducto.Name = "textoProducto";
             textoProducto.PlaceholderText = "Selecciona un producto";
             textoProducto.ReadOnly = true;
-            textoProducto.Size = new Size(467, 30);
+            textoProducto.Size = new Size(446, 30);
             textoProducto.TabIndex = 8;
             // 
             // botonBuscarProducto
@@ -239,7 +239,7 @@ namespace PollosTrack.POS.Forms
             botonBuscarProducto.FlatAppearance.BorderSize = 0;
             botonBuscarProducto.FlatStyle = FlatStyle.Flat;
             botonBuscarProducto.ForeColor = Color.White;
-            botonBuscarProducto.Location = new Point(470, 3);
+            botonBuscarProducto.Location = new Point(449, 3);
             botonBuscarProducto.MinimumSize = new Size(0, 36);
             botonBuscarProducto.Name = "botonBuscarProducto";
             botonBuscarProducto.Size = new Size(154, 42);
@@ -266,7 +266,7 @@ namespace PollosTrack.POS.Forms
             cantidadProducto.Maximum = new decimal(new int[] { 999, 0, 0, 0 });
             cantidadProducto.Minimum = new decimal(new int[] { 1, 0, 0, 0 });
             cantidadProducto.Name = "cantidadProducto";
-            cantidadProducto.Size = new Size(633, 30);
+            cantidadProducto.Size = new Size(612, 30);
             cantidadProducto.TabIndex = 10;
             cantidadProducto.Value = new decimal(new int[] { 1, 0, 0, 0 });
             cantidadProducto.ValueChanged += AlCambiarImporte;
@@ -289,7 +289,7 @@ namespace PollosTrack.POS.Forms
             textoNotas.MaxLength = 150;
             textoNotas.Name = "textoNotas";
             textoNotas.PlaceholderText = "Ej.: sin salsa (máximo 150 caracteres)";
-            textoNotas.Size = new Size(633, 30);
+            textoNotas.Size = new Size(612, 30);
             textoNotas.TabIndex = 12;
             // 
             // etiquetaImporteDetalle
@@ -309,7 +309,7 @@ namespace PollosTrack.POS.Forms
             etiquetaPrecio.Location = new Point(180, 274);
             etiquetaPrecio.Margin = new Padding(0, 6, 0, 12);
             etiquetaPrecio.Name = "etiquetaPrecio";
-            etiquetaPrecio.Size = new Size(633, 25);
+            etiquetaPrecio.Size = new Size(612, 25);
             etiquetaPrecio.TabIndex = 14;
             etiquetaPrecio.Text = "Selecciona un producto para ver su importe.";
             // 
@@ -332,7 +332,7 @@ namespace PollosTrack.POS.Forms
             distribucionPrincipal.RowStyles.Add(new RowStyle(SizeType.Absolute, 104F));
             distribucionPrincipal.RowStyles.Add(new RowStyle());
             distribucionPrincipal.RowStyles.Add(new RowStyle());
-            distribucionPrincipal.Size = new Size(839, 1259);
+            distribucionPrincipal.Size = new Size(818, 1259);
             distribucionPrincipal.TabIndex = 0;
             // 
             // etiquetaTitulo
@@ -341,7 +341,7 @@ namespace PollosTrack.POS.Forms
             etiquetaTitulo.Font = new Font("Segoe UI", 18F, FontStyle.Bold);
             etiquetaTitulo.Location = new Point(3, 0);
             etiquetaTitulo.Name = "etiquetaTitulo";
-            etiquetaTitulo.Size = new Size(664, 55);
+            etiquetaTitulo.Size = new Size(643, 55);
             etiquetaTitulo.TabIndex = 0;
             etiquetaTitulo.Text = "Gestión de comandas";
             etiquetaTitulo.TextAlign = ContentAlignment.MiddleLeft;
@@ -352,7 +352,7 @@ namespace PollosTrack.POS.Forms
             botonVolverAMesas.Dock = DockStyle.Fill;
             botonVolverAMesas.FlatAppearance.BorderSize = 0;
             botonVolverAMesas.FlatStyle = FlatStyle.Flat;
-            botonVolverAMesas.Location = new Point(670, 7);
+            botonVolverAMesas.Location = new Point(649, 7);
             botonVolverAMesas.Margin = new Padding(0, 7, 0, 7);
             botonVolverAMesas.Name = "botonVolverAMesas";
             botonVolverAMesas.Size = new Size(169, 41);
@@ -370,7 +370,7 @@ namespace PollosTrack.POS.Forms
             etiquetaDescripcion.Margin = new Padding(0, 14, 0, 18);
             etiquetaDescripcion.Name = "etiquetaDescripcion";
             etiquetaDescripcion.Padding = new Padding(18, 9, 18, 9);
-            etiquetaDescripcion.Size = new Size(839, 72);
+            etiquetaDescripcion.Size = new Size(818, 72);
             etiquetaDescripcion.TabIndex = 2;
             etiquetaDescripcion.Text = "Selecciona una mesa desde el mapa para comenzar.";
             etiquetaDescripcion.TextAlign = ContentAlignment.MiddleLeft;
@@ -404,7 +404,7 @@ namespace PollosTrack.POS.Forms
             panelEncabezado.RowStyles.Add(new RowStyle());
             panelEncabezado.RowStyles.Add(new RowStyle());
             panelEncabezado.RowStyles.Add(new RowStyle(SizeType.Absolute, 67F));
-            panelEncabezado.Size = new Size(839, 448);
+            panelEncabezado.Size = new Size(818, 448);
             panelEncabezado.TabIndex = 3;
             // 
             // etiquetaSeccion
@@ -452,7 +452,7 @@ namespace PollosTrack.POS.Forms
             filaCliente.Name = "filaCliente";
             filaCliente.RowCount = 1;
             filaCliente.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
-            filaCliente.Size = new Size(785, 55);
+            filaCliente.Size = new Size(764, 55);
             filaCliente.TabIndex = 3;
             // 
             // textoCliente
@@ -462,7 +462,7 @@ namespace PollosTrack.POS.Forms
             textoCliente.Margin = new Padding(0, 6, 14, 0);
             textoCliente.Name = "textoCliente";
             textoCliente.PlaceholderText = "Nombre, identificación o teléfono";
-            textoCliente.Size = new Size(608, 30);
+            textoCliente.Size = new Size(587, 30);
             textoCliente.TabIndex = 0;
             // 
             // botonBuscar
@@ -472,7 +472,7 @@ namespace PollosTrack.POS.Forms
             botonBuscar.FlatAppearance.BorderSize = 0;
             botonBuscar.FlatStyle = FlatStyle.Flat;
             botonBuscar.ForeColor = Color.White;
-            botonBuscar.Location = new Point(622, 0);
+            botonBuscar.Location = new Point(601, 0);
             botonBuscar.Margin = new Padding(0, 0, 0, 9);
             botonBuscar.Name = "botonBuscar";
             botonBuscar.Size = new Size(163, 46);
@@ -500,7 +500,7 @@ namespace PollosTrack.POS.Forms
             textoReferencia.MaxLength = 50;
             textoReferencia.Name = "textoReferencia";
             textoReferencia.PlaceholderText = "Nombre de quien solicita la cuenta";
-            textoReferencia.Size = new Size(785, 30);
+            textoReferencia.Size = new Size(764, 30);
             textoReferencia.TabIndex = 5;
             textoReferencia.Visible = false;
             // 
@@ -522,7 +522,7 @@ namespace PollosTrack.POS.Forms
             botonGuardar.FlatAppearance.BorderSize = 0;
             botonGuardar.FlatStyle = FlatStyle.Flat;
             botonGuardar.ForeColor = Color.Black;
-            botonGuardar.Location = new Point(645, 356);
+            botonGuardar.Location = new Point(624, 356);
             botonGuardar.Name = "botonGuardar";
             botonGuardar.Size = new Size(164, 48);
             botonGuardar.TabIndex = 7;
@@ -541,7 +541,7 @@ namespace PollosTrack.POS.Forms
             ForeColor = Color.FromArgb(24, 49, 83);
             Name = "VistaComanda";
             Padding = new Padding(27, 28, 27, 28);
-            Size = new Size(893, 713);
+            Size = new Size(872, 713);
             Load += AlCargarComanda;
             panelDetalle.ResumeLayout(false);
             panelDetalle.PerformLayout();

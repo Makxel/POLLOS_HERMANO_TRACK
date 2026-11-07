@@ -9,6 +9,7 @@ namespace PollosTrack.POS.Forms
     {
         public event EventHandler? VolverAMesasSolicitado;
         public Mesa? MesaActual { get; private set; }
+        // Recibe desde FormPrincipal el identificador del usuario autenticado.
         [System.ComponentModel.Browsable(false)]
         [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public int? UsuarioSesionId { get; set; }

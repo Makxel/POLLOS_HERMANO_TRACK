@@ -20,7 +20,7 @@ namespace PollosTrack.POS.Forms
         private Producto? productoSeleccionado;
         private List<Producto> productos = new List<Producto>();
 
-        // Cuando exista inicio de sesión, asignar aquí el ID del usuario autenticado.
+        // Recibe desde FormPrincipal el identificador del usuario autenticado.
         [System.ComponentModel.Browsable(false)]
         [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         
@@ -45,7 +45,7 @@ namespace PollosTrack.POS.Forms
                 etiquetaDescripcion.Text += "\r\nSelecciona una cuenta para consultar sus productos.";
         }
 
-        // Busca un usuario activo ya registrado; la sesión tendrá prioridad cuando exista.
+        // Verifica el usuario de la sesión; conserva Sistema como respaldo temporal.
         private int ObtenerUsuarioResponsable(SqlConnection conexion, SqlTransaction transaccion)
         {
             string consulta = "SELECT USUARIO_ID FROM SEG.USUARIOS WHERE USERNAME=@Nombre AND ACTIVO=1";

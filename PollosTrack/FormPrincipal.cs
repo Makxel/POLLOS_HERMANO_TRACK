@@ -1,4 +1,9 @@
 using PollosTrack.POS.Forms;
+<<<<<<< Updated upstream
+=======
+using PollosTrack.Catalogos.Forms;
+using PollosTrack.Utils;
+>>>>>>> Stashed changes
 
 namespace PollosTrack
 {
@@ -105,6 +110,20 @@ namespace PollosTrack
         // Todas las pantallas se cargan en el mismo contenedor, conservando el menú.
         private void MostrarVista(UserControl nuevaVista, string titulo, Button botonSeleccionado)
         {
+            // Pasa el usuario autenticado antes de cargar los datos de la vista.
+            if (SesionActual.Usuario != null)
+            {
+                if (nuevaVista is VistaComanda vistaComanda)
+                {
+                    vistaComanda.UsuarioSesionId = SesionActual.Usuario.UsuarioId;
+                }
+
+                if (nuevaVista is VistaFacturacion vistaFacturacion)
+                {
+                    vistaFacturacion.UsuarioSesionId = SesionActual.Usuario.UsuarioId;
+                }
+            }
+
             panelContenido.SuspendLayout();
             try
             {
